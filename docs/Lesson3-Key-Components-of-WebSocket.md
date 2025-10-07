@@ -13,6 +13,7 @@ HTTP polling lag 500ms .
   const ws = new WebSocket('ws://echo.websocket.org'); // Test handshake
   ws.onopen = () => console.log('Handshake thành công – nâng cấp OK!'); // Trigger sau 101
   ws.onerror = (err) => console.log('Handshake fail:', err); // Nếu server từ chối
+  
 - "Frames là đơn vị dữ liệu nhỏ (text/binary) trong WebSocket, với opcode (loại data) và payload (nội dung), tối ưu cho
   tin nhắn real-time."
 - Giải thích từng bước:
@@ -21,8 +22,7 @@ Bước 1: Frame có header (opcode: 0x1 text, 0x2 binary; mask bit).
 Bước 2: Payload là data thực (e.g., "Hello" – chỉ 5 byte).
 Bước 3: Gửi liên tục qua single TCP, nhận qua onmessage.
 
-- Ví dụ thực tế: Trong PUBG, frames binary gửi vị trí người chơi (opcode 0x2, 20 byte) – nhỏ gọn, không lag như HTTP 1KB
-  response.
+- Ví dụ thực tế: Trong PUBG, frames binary gửi vị trí người chơi (opcode 0x2, 20 byte) – nhỏ gọn, không lag như HTTP 1KB response.
 - Code minh họa (Test gửi frame text/binary trong console):
 
   const ws = new WebSocket('ws://echo.websocket.org');
@@ -50,8 +50,7 @@ Code minh họa (Test close code trong console):
 const ws = new WebSocket('ws://echo.websocket.org');
 ws.onopen = () => {
 console.log('Mở kết nối');
-ws.send('Test trước close');
-};
+ws.send('Test trước close');};
 ws.onclose = (event) => console.log('Close code:', event.code, 'Reason:', event.reason); // Log code 1000
 
 // Đóng với code 1000 sau 2s
@@ -74,7 +73,6 @@ không events, app "im lặng" khi lỗi.
 Code minh họa (Test 4 events trong console):
 
 const ws = new WebSocket('ws://echo.websocket.org');
-
 // Event 1: onopen – mở để nhắn
 ws.onopen = () => console.log('onopen: Handshake OK, ready to message!');
 
@@ -90,7 +88,7 @@ ws.onclose = (event) => console.log('onclose: Closed code', event.code, '– No 
 ws.send('Test message');  // Trigger onmessage
 setTimeout(() => ws.close(1000), 3000);  // Trigger onclose
 
-- Câu hỏi: setTimeout(() => ws.close(1000, 'Normal close'), 5000); này là sao?
+- Câu hỏi 1: setTimeout(() => ws.close(1000, 'Normal close'), 5000); này là sao?
 
 Trả lời: Đây là hàm JS delay 5s để gọi ws.close với code 1000 – demo test onclose event, không phụ thuộc nhắn tin.
 Giải thích từng bước: setTimeout chạy callback sau 5000ms, ws.close gửi frame close (code 1000), trigger onclose sau xác nhận.
@@ -102,12 +100,13 @@ ws.onclose = (event) => console.log('onclose code 1000 sau 5s');
 ws.send('Test trước close');
 setTimeout(() => ws.close(1000, 'Normal close'), 5000);  // Delay 5s đóng
 
-- Câu hỏi: vậy là close code đóng trước rồi onclose trong event với đóng à?
+- Câu hỏi 2: vậy là close code đóng trước rồi onclose trong event với đóng à?
 
 Trả lời: Đúng, close code gửi trước (frame close báo hiệu), onclose trigger sau (xử lý đóng).
 Giải thích từng bước: Gửi close frame → Xác nhận → TCP teardown → Onclose fire.
 Ví dụ thực tế: Logout gửi code 1000 trước, onclose sau để cleanup.
 Code minh họa (Test thứ tự):
+
 javascriptconst ws = new WebSocket('ws://echo.websocket.org');
 ws.onopen = () => {
 console.log('onopen: Mở');
@@ -117,7 +116,7 @@ ws.close(1000, 'Normal close');
 }, 2000); };
 ws.onclose = (event) => console.log('onclose sau close code:', event.code);
 
-- Câu hỏi: vậy lỡ có sự cố đột xuất thì close code kịp thông báo không để onclose đóng, hay là không cần thông báo onclose đóng liền luôn?
+- Câu hỏi 3: vậy lỡ có sự cố đột xuất thì close code kịp thông báo không để onclose đóng, hay là không cần thông báo onclose đóng liền luôn?
 
 Trả lời: Sự cố đột ngột (mạng đứt) không kịp gửi close code, onclose đóng liền với code 1006 (Abnormal). Normal thì thông báo trước.
 Giải thích từng bước: Abnormal: TCP chết ngay, onclose 1006 liền; Normal: Frame close trước, onclose sau.
@@ -128,7 +127,7 @@ ws.onopen = () => console.log('onopen: Mở');
 ws.onclose = (event) => console.log('onclose đột ngột code 1006: Đóng liền!');
 setTimeout(() => ws.terminate(), 2000);  // Force đột ngột, không code
 
-- Câu hỏi: ví dụ: khi mất mạng đột ngột thì onclose tự đóng không cần close code báo. Còn việc log out thì sẽ được close code báo 1000 và khi đó onclose nhận thông báo thì với bắt đầu đóng. Khi đã đóng 1000 hay 1006 thì data vẫn nằm ở server đợi handshake lại thì sẽ gửi data lên
+- Câu hỏi 4: ví dụ: khi mất mạng đột ngột thì onclose tự đóng không cần close code báo. Còn việc log out thì sẽ được close code báo 1000 và khi đó onclose nhận thông báo thì với bắt đầu đóng. Khi đã đóng 1000 hay 1006 thì data vẫn nằm ở server đợi handshake lại thì sẽ gửi data lên
 
 Đánh giá: Đúng 90% – ví dụ hay, đúng flow đột ngột vs normal, data chờ phụ thuộc broker.
 Sửa: Onclose xử lý sau đóng (không "bắt đầu đóng"), data chờ nếu broker queue.
