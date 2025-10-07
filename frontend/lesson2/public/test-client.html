@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test STOMP Broker Broadcast</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body>
+<h3>Test Client STOMP (Mở 2 tab để thấy broadcast)</h3>
+<button onclick="connectAndSend()">Kết Nối & Gửi Message</button>
+<p id="result"></p>
+<script>
+    let stompClient;
+    function connectAndSend() {
+        const socket = new SockJS('http://localhost:8080/ws');  // Kết nối endpoint
+        stompClient = Stomp.over(socket);
+        stompClient.connect({}, frame => {  // STOMP CONNECT
+            console.log('Kết nối STOMP OK!');
+            stompClient.subscribe('/topic/chat', msg => {  // SUBSCRIBE broker topic
+                document.getElementById('result').innerText += '\nNhận broadcast: ' + msg.body;
+            });
+            stompClient.send('/app/chat', {}, 'Hello từ client!');  // SEND → Broker → Broadcast
+        });
+    }
+</script>
+</body>
+</html>
