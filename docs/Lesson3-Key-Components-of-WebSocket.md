@@ -183,3 +183,5 @@ setTimeout(() => console.log('Reconnect gửi data queued'), 1000);
     </script>
 </body>
 </html>
+
+![Sơ đồ hoạt động của events](images/mermaid-diagram.svg)
