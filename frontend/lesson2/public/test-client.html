@@ -1,26 +1,48 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-    <title>Test STOMP Broker Broadcast</title>
+    <meta charset="UTF-8">  <!-- Fix garbled text – UTF-8 cho tiếng Việt -->
+    <title>Test STOMP Không Duplicate (Mở 2 tab – Connect 1 lần, Send nhiều lần)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 </head>
 <body>
-<h3>Test Client STOMP (Mở 2 tab để thấy broadcast)</h3>
-<button onclick="connectAndSend()">Kết Nối & Gửi Message</button>
+<h3>Test STOMP Không Duplicate (Mở 2 tab – Connect 1 lần, Send nhiều lần)</h3>
+<button onclick="connectStomp()">Kết Nối & Subscribe (1 lần)</button>
+<button onclick="sendMessage()">Gửi Message (Nhiều lần OK)</button>
 <p id="result"></p>
+<p id="status">Trạng thái: Chưa kết nối</p>
 <script>
     let stompClient;
-    function connectAndSend() {
-        const socket = new SockJS('http://localhost:8080/ws');  // Kết nối endpoint
+    let isConnected = false;
+
+    function connectStomp() {
+        if (isConnected) {
+            console.log('Đã kết nối rồi – không subscribe lặp!');
+            return;
+        }
+        const socket = new SockJS('http://localhost:8080/ws');
         stompClient = Stomp.over(socket);
-        stompClient.connect({}, frame => {  // STOMP CONNECT
+        stompClient.connect({}, frame => {
             console.log('Kết nối STOMP OK!');
-            stompClient.subscribe('/topic/chat', msg => {  // SUBSCRIBE broker topic
+            stompClient.subscribe('/topic/chat', msg => {  // Subscribe 1 lần duy nhất
                 document.getElementById('result').innerText += '\nNhận broadcast: ' + msg.body;
             });
-            stompClient.send('/app/chat', {}, 'Hello từ client!');  // SEND → Broker → Broadcast
+            isConnected = true;
+            document.getElementById('status').innerText = 'Trạng thái: Kết nối OK – Sẵn sàng gửi!';
+        }, error => {
+            console.error('Lỗi kết nối:', error);
+            document.getElementById('status').innerText = 'Lỗi kết nối!';
         });
+    }
+
+    function sendMessage() {
+        if (!isConnected || !stompClient) {
+            console.log('Chưa kết nối – click Connect trước!');
+            return;
+        }
+        stompClient.send('/app/chat', {}, 'Hello lần ' + new Date().getSeconds());  // Send nhiều lần, không tạo client mới
+        console.log('Gửi message – subscribe không lặp!');
     }
 </script>
 </body>
