@@ -41,7 +41,7 @@
             console.log('Chưa kết nối – click Connect trước!');
             return;
         }
-        stompClient.send('/app/chat', {}, 'Hello lần ' + new Date().getSeconds());  // Send nhiều lần, không tạo client mới
+        stompClient.send('/app/reply', {}, 'Hello lần ' + new Date().getSeconds());  // Send nhiều lần, không tạo client mới
         console.log('Gửi message – subscribe không lặp!');
     }
 </script>
